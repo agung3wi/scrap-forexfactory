@@ -5,6 +5,8 @@ const fs = require('fs')
 
 const chrome = require('selenium-webdriver/chrome');
 const chromedriver = require('chromedriver');
+const HTMLParser = require('node-html-parser');
+
 
 var o = new chrome.Options();
 
@@ -30,13 +32,18 @@ let scrapToday = function () {
 
             let time = []
             let elements = await driver.findElements(By.xpath("//tr[contains(@class, 'calendar__row calendar_row')]"))
-            let currentTime = ""
-            currentCurr = ""
-            previous = ""
-            forecast = ""
-            actual = ""
+            let currentTime = "",
+            currentCurr = "",
+            previous = "",
+            forecast = "",
+            actual = "",
+            impact = ""
+            
             let result = []
             for (let e of elements) {
+                let html = await e.getAttribute('innerHTML')
+                impact = HTMLParser.parse(html).querySelector(".calendar__impact-icon").querySelector("span").classNames.trim()
+
                 const text = (await e.getText()).split("\n")
                 if (text.length < 3) continue
                 if (text.length > 3) {
@@ -75,7 +82,8 @@ let scrapToday = function () {
                 result.push({
                     time: currentTime,
                     currency: currentCurr,
-                    impact: text[1],
+                    impact: impact,
+                    news: text[1],
                     actual: actual,
                     forecast: forecast,
                     previous: previous
@@ -84,8 +92,11 @@ let scrapToday = function () {
 
             }
             filepath = "./data/" + moment().format("YYYY-MM-DD") + ".json"
+            filepathToday = "./data/today.json"
             fs.writeFileSync(filepath, JSON.stringify(result));
-            console.log("Finish scrap")
+            fs.writeFileSync(filepathToday, JSON.stringify(result));
+
+            console.log("Finish scrap", result)
 
 
         } catch(err) {
@@ -106,11 +117,11 @@ const port = 5300
 app.use(express.static('data'))
 
 app.get('/', (req, res) => {
-    const testFolder = './data/';
+    const todayFile = './data/today.json';
     const fs = require('fs');
     
-    const files = fs.readdirSync(testFolder)
-    res.json(files)
+    const content = JSON.parse(fs.readFileSync(todayFile, 'utf8'))
+    res.json(content)
 })
 
 app.get('/scrap', async (req, res) => {

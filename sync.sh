@@ -1,0 +1,1 @@
+rsync -avz ./ pttas@pttas.xyz:~/scrap-forex-factory/ --exclude=node_modules --exclude=data
